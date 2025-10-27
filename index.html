@@ -3,46 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TODOリスト</title>
+<title>イベント管理リスト</title>
 <style>
-  body { font-family: sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
-  header { background: #343a40; color: white; padding: 1rem; text-align: center; }
-  table { width: 100%; border-collapse: collapse; margin: 0; }
-  th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; font-size: 1rem; }
-  th { background: #e9ecef; }
-  input[type=text] { width: 70%; padding: 0.5rem; margin: 0.5rem 0; font-size: 1rem; }
-  button { padding: 0.5rem 1rem; font-size: 1rem; margin-left: 0.5rem; }
-  @media (max-width: 600px) {
-    table, th, td { font-size: 0.9rem; }
-    input[type=text] { width: 60%; }
+  body { font-family: sans-serif; margin:0; padding:0; background:#f8f9fa; }
+  header { background:#343a40; color:white; text-align:center; padding:1rem; }
+  section { padding:1rem; }
+  input[type=text], input[type=number] { padding:0.5rem; font-size:1rem; margin:0.3rem 0; }
+  button { padding:0.5rem 1rem; font-size:1rem; margin-left:0.3rem; }
+  table { width:100%; border-collapse: collapse; margin-top:0.5rem; overflow-x:auto; display:block; }
+  th, td { border:1px solid #ccc; padding:0.5rem; text-align:left; }
+  th { background:#e9ecef; }
+  .member-list { list-style:none; padding:0; }
+  .member-list li { padding:0.3rem 0; }
+  @media (max-width:600px){
+    input[type=text], input[type=number] { width:60%; }
+    table { font-size:0.9rem; }
   }
 </style>
 </head>
 <body>
-<header>共同TODOリスト</header>
+<header>イベント管理リスト</header>
 
-<div style="padding: 1rem;">
-  <input id="taskInput" type="text" placeholder="タスク名">
-  <button onclick="addTask()">追加</button>
-  <table id="todoTable">
-    <tr><th>タスク</th><th>担当</th><th>期限</th><th>完了</th></tr>
+<section id="members">
+  <h2>メンバーリスト</h2>
+  <input type="text" id="memberInput" placeholder="名前を追加">
+  <button onclick="addMember()">追加</button>
+  <ul id="memberList" class="member-list"></ul>
+</section>
+
+<section id="events">
+  <h2>イベントリスト</h2>
+  <input type="text" id="eventInput" placeholder="イベント名">
+  <input type="number" id="eventNum" placeholder="必要人数" min="1" style="width:25%;">
+  <button onclick="addEvent()">追加</button>
+  <table id="eventTable">
+    <tr>
+      <th>イベント名</th>
+      <th>参加済</th>
+      <th>参加希望</th>
+      <th>未参加</th>
+      <th>人数</th>
+    </tr>
   </table>
-</div>
+</section>
 
 <script>
-function addTask() {
-  const taskName = document.getElementById("taskInput").value.trim();
-  if(!taskName) return;
+let members = [];
 
-  const table = document.getElementById("todoTable");
-  const row = table.insertRow();
-  row.insertCell(0).innerText = taskName;
-  row.insertCell(1).innerHTML = "<input type='text' placeholder='担当'>";
-  row.insertCell(2).innerHTML = "<input type='date'>";
-  row.insertCell(3).innerHTML = "<input type='checkbox'>";
+// メンバー追加
+function addMember(){
+  const name = document.getElementById("memberInput").value.trim();
+  if(!name) return;
+  members.push(name);
   
-  document.getElementById("taskInput").value = "";
+  const ul = document.getElementById("memberList");
+  const li = document.createElement("li");
+  li.innerText = name;
+  ul.appendChild(li);
+  
+  document.getElementById("memberInput").value="";
+}
+
+// メンバーのチェックリスト作成
+function createMemberCheckboxes() {
+  return members.map(name => {
+    return `<label><input type="checkbox" value="${name}"> ${name}</label><br>`;
+  }).join('');
+}
+
+// イベント追加
+function addEvent(){
+  const eventName = document.getElementById("eventInput").value.trim();
+  const eventNum = document.getElementById("eventNum").value;
+  if(!eventName || !eventNum) return;
+
+  const table = document.getElementById("eventTable");
+  const row = table.insertRow();
+
+  // イベント名
+  row.insertCell(0).innerText = eventName;
+
+  // 参加済、参加希望、未参加
+  row.insertCell(1).innerHTML = createMemberCheckboxes();
+  row.insertCell(2).innerHTML = createMemberCheckboxes();
+  row.insertCell(3).innerHTML = createMemberCheckboxes(); // 未参加にデフォルトで全員チェック
+  row.cells[3].querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
+
+  // 必要人数
+  row.insertCell(4).innerHTML = `<input type="number" value="${eventNum}" min="1" style="width:60px;">`;
+
+  document.getElementById("eventInput").value="";
+  document.getElementById("eventNum").value="";
 }
 </script>
+
 </body>
 </html>
