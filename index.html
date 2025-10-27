@@ -5,20 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>イベント管理リスト</title>
 <style>
-  body { font-family: sans-serif; margin:0; padding:0; background:#f8f9fa; }
-  header { background:#343a40; color:white; text-align:center; padding:1rem; }
-  section { padding:1rem; }
-  input[type=text], input[type=number] { padding:0.5rem; font-size:1rem; margin:0.3rem 0; }
-  button { padding:0.5rem 1rem; font-size:1rem; margin-left:0.3rem; }
-  table { width:100%; border-collapse: collapse; margin-top:0.5rem; overflow-x:auto; display:block; }
-  th, td { border:1px solid #ccc; padding:0.5rem; text-align:left; }
-  th { background:#e9ecef; }
-  .member-list { list-style:none; padding:0; }
-  .member-list li { padding:0.3rem 0; }
-  @media (max-width:600px){
-    input[type=text], input[type=number] { width:60%; }
-    table { font-size:0.9rem; }
-  }
+body { font-family:sans-serif; margin:0; padding:0; background:#f8f9fa; }
+header { background:#343a40; color:white; text-align:center; padding:1rem; }
+section { padding:1rem; }
+input[type=text], input[type=number], select { padding:0.5rem; font-size:1rem; margin:0.3rem 0; }
+button { padding:0.5rem 1rem; font-size:1rem; margin-left:0.3rem; }
+table { width:100%; border-collapse: collapse; margin-top:0.5rem; overflow-x:auto; display:block; }
+th, td { border:1px solid #ccc; padding:0.5rem; text-align:left; vertical-align:top; }
+th { background:#e9ecef; }
+.member-list { list-style:none; padding:0; }
+.member-list li { padding:0.3rem 0; }
+.member-select { width: 100%; margin-bottom: 0.2rem; }
+@media (max-width:600px){
+  input[type=text], input[type=number], select { width:60%; }
+  table { font-size:0.9rem; }
+}
 </style>
 </head>
 <body>
@@ -49,11 +50,12 @@
 
 <script>
 let members = [];
+let events = [];
 
 // メンバー追加
 function addMember(){
   const name = document.getElementById("memberInput").value.trim();
-  if(!name) return;
+  if(!name || members.includes(name)) return;
   members.push(name);
   
   const ul = document.getElementById("memberList");
@@ -61,40 +63,94 @@ function addMember(){
   li.innerText = name;
   ul.appendChild(li);
   
+  // 既存イベントに未参加として追加
+  events.forEach(event => {
+    event.status[name] = '未参加';
+  });
+  
+  renderEvents();
   document.getElementById("memberInput").value="";
-}
-
-// メンバーのチェックリスト作成
-function createMemberCheckboxes() {
-  return members.map(name => {
-    return `<label><input type="checkbox" value="${name}"> ${name}</label><br>`;
-  }).join('');
 }
 
 // イベント追加
 function addEvent(){
-  const eventName = document.getElementById("eventInput").value.trim();
-  const eventNum = document.getElementById("eventNum").value;
-  if(!eventName || !eventNum) return;
-
-  const table = document.getElementById("eventTable");
-  const row = table.insertRow();
-
-  // イベント名
-  row.insertCell(0).innerText = eventName;
-
-  // 参加済、参加希望、未参加
-  row.insertCell(1).innerHTML = createMemberCheckboxes();
-  row.insertCell(2).innerHTML = createMemberCheckboxes();
-  row.insertCell(3).innerHTML = createMemberCheckboxes(); // 未参加にデフォルトで全員チェック
-  row.cells[3].querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
-
-  // 必要人数
-  row.insertCell(4).innerHTML = `<input type="number" value="${eventNum}" min="1" style="width:60px;">`;
-
+  const name = document.getElementById("eventInput").value.trim();
+  const num = document.getElementById("eventNum").value;
+  if(!name || !num) return;
+  
+  // 各メンバーは未参加で初期化
+  let status = {};
+  members.forEach(m => status[m]='未参加');
+  events.push({name:name, num:num, status: status});
+  
+  renderEvents();
+  
   document.getElementById("eventInput").value="";
   document.getElementById("eventNum").value="";
 }
+
+// 参加状況変更
+function changeStatus(eventIndex, member, newStatus){
+  let event = events[eventIndex];
+  event.status[member] = newStatus;
+  renderEvents();
+}
+
+// テーブル表示
+function renderEvents(){
+  const table = document.getElementById("eventTable");
+  table.innerHTML = `
+    <tr>
+      <th>イベント名</th>
+      <th>参加済</th>
+      <th>参加希望</th>
+      <th>未参加</th>
+      <th>人数</th>
+    </tr>
+  `;
+  
+  events.forEach((event, idx)=>{
+    const row = table.insertRow();
+    
+    // イベント名編集可
+    const nameCell = row.insertCell(0);
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = event.name;
+    nameInput.onchange = e => { event.name = e.target.value; };
+    nameCell.appendChild(nameInput);
+    
+    // 参加済・参加希望・未参加
+    ['参加済','参加希望','未参加'].forEach((statusKey,colIndex)=>{
+      const cell = row.insertCell(colIndex+1);
+      Object.keys(event.status).forEach(member=>{
+        if(event.status[member]===statusKey){
+          const div = document.createElement("div");
+          div.innerText = member;
+          div.style.cursor = "pointer";
+          div.onclick = ()=>{
+            // クリックで状態切替
+            const nextStatus = prompt(`"${member}" の状態を変更 (参加済 / 参加希望 / 未参加)`, event.status[member]);
+            if(['参加済','参加希望','未参加'].includes(nextStatus)){
+              changeStatus(idx, member, nextStatus);
+            }
+          };
+          cell.appendChild(div);
+        }
+      });
+    });
+    
+    // 必要人数編集可
+    const numCell = row.insertCell(4);
+    const numInput = document.createElement("input");
+    numInput.type="number";
+    numInput.min="1";
+    numInput.value = event.num;
+    numInput.onchange = e=>{ event.num = e.target.value; };
+    numCell.appendChild(numInput);
+  });
+}
+
 </script>
 
 </body>
