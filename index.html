@@ -3,28 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>イベント管理リスト</title>
+<title>イベント管理リスト（モーダル版）</title>
 <style>
 body { font-family:sans-serif; margin:0; padding:0; background:#f8f9fa; }
 header { background:#343a40; color:white; text-align:center; padding:1rem; }
 section { padding:1rem; }
-input[type=text], input[type=number], select { padding:0.4rem; font-size:1rem; margin:0.3rem 0; }
-button { padding:0.4rem 0.8rem; font-size:1rem; margin-left:0.3rem; }
+input[type=text], input[type=number], button { padding:0.4rem; font-size:1rem; margin:0.3rem 0; }
 table { width:100%; border-collapse: collapse; margin-top:0.5rem; overflow-x:auto; display:block; }
 th, td { border:1px solid #ccc; padding:0.5rem; text-align:left; vertical-align:top; }
 th { background:#e9ecef; }
 .member-list { list-style:none; padding:0; }
 .member-list li { padding:0.3rem 0; }
-.member-row { display:flex; flex-wrap: wrap; gap:0.5rem; margin-bottom:0.2rem; }
-.member-row select { flex:1; }
+.member-row { cursor:pointer; padding:0.2rem 0; border-bottom:1px solid #ddd; }
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; }
+.modal-content { background:white; padding:1rem; border-radius:8px; width:80%; max-width:300px; }
+.modal-content h3 { margin-top:0; }
+.modal-content button { display:block; width:100%; margin:0.5rem 0; font-size:1rem; padding:0.5rem; }
 @media (max-width:600px){
-  input[type=text], input[type=number], select { width:60%; }
+  input[type=text], input[type=number], button { width:60%; }
   table { font-size:0.9rem; }
 }
 </style>
 </head>
 <body>
-<header>イベント管理リスト</header>
+<header>イベント管理リスト（モーダル版）</header>
 
 <section id="members">
   <h2>メンバーリスト</h2>
@@ -49,9 +51,21 @@ th { background:#e9ecef; }
   </table>
 </section>
 
+<!-- モーダル -->
+<div id="statusModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalMemberName"></h3>
+    <button onclick="setStatus('参加済')">参加済</button>
+    <button onclick="setStatus('参加希望')">参加希望</button>
+    <button onclick="setStatus('未参加')">未参加</button>
+    <button onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+
 <script>
 let members = [];
 let events = [];
+let modalInfo = null;
 
 // メンバー追加
 function addMember(){
@@ -88,11 +102,22 @@ function addEvent(){
   document.getElementById("eventNum").value="";
 }
 
-// 参加状況変更
-function changeStatus(eventIndex, member, newStatus){
-  let event = events[eventIndex];
-  event.status[member] = newStatus;
-  renderEvents();
+// モーダルで状態変更
+function openModal(eventIndex, member){
+  modalInfo = {eventIndex, member};
+  document.getElementById("modalMemberName").innerText = member;
+  document.getElementById("statusModal").style.display="flex";
+}
+function closeModal(){
+  document.getElementById("statusModal").style.display="none";
+  modalInfo = null;
+}
+function setStatus(status){
+  if(modalInfo){
+    events[modalInfo.eventIndex].status[modalInfo.member] = status;
+    closeModal();
+    renderEvents();
+  }
 }
 
 // テーブル描画
@@ -126,20 +151,8 @@ function renderEvents(){
         if(event.status[member]===statusKey){
           const div = document.createElement("div");
           div.className="member-row";
-          const select = document.createElement("select");
-          ['参加済','参加希望','未参加'].forEach(option=>{
-            const opt = document.createElement("option");
-            opt.value = option;
-            opt.text = option;
-            if(option===statusKey) opt.selected=true;
-            select.appendChild(opt);
-          });
-          select.onchange = e=>{ changeStatus(idx, member, e.target.value); };
-          select.title = member;
-          const label = document.createElement("span");
-          label.innerText = member;
-          div.appendChild(label);
-          div.appendChild(select);
+          div.innerText = member;
+          div.onclick = ()=> openModal(idx, member);
           cell.appendChild(div);
         }
       });
@@ -154,6 +167,12 @@ function renderEvents(){
     numInput.onchange = e=>{ event.num = e.target.value; };
     numCell.appendChild(numInput);
   });
+}
+
+// モーダル外クリックで閉じる
+window.onclick = function(e){
+  const modal = document.getElementById("statusModal");
+  if(e.target===modal) closeModal();
 }
 </script>
 </body>
