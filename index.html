@@ -8,14 +8,15 @@
 body { font-family:sans-serif; margin:0; padding:0; background:#f8f9fa; }
 header { background:#343a40; color:white; text-align:center; padding:1rem; }
 section { padding:1rem; }
-input[type=text], input[type=number], select { padding:0.5rem; font-size:1rem; margin:0.3rem 0; }
-button { padding:0.5rem 1rem; font-size:1rem; margin-left:0.3rem; }
+input[type=text], input[type=number], select { padding:0.4rem; font-size:1rem; margin:0.3rem 0; }
+button { padding:0.4rem 0.8rem; font-size:1rem; margin-left:0.3rem; }
 table { width:100%; border-collapse: collapse; margin-top:0.5rem; overflow-x:auto; display:block; }
 th, td { border:1px solid #ccc; padding:0.5rem; text-align:left; vertical-align:top; }
 th { background:#e9ecef; }
 .member-list { list-style:none; padding:0; }
 .member-list li { padding:0.3rem 0; }
-.member-select { width: 100%; margin-bottom: 0.2rem; }
+.member-row { display:flex; flex-wrap: wrap; gap:0.5rem; margin-bottom:0.2rem; }
+.member-row select { flex:1; }
 @media (max-width:600px){
   input[type=text], input[type=number], select { width:60%; }
   table { font-size:0.9rem; }
@@ -57,17 +58,17 @@ function addMember(){
   const name = document.getElementById("memberInput").value.trim();
   if(!name || members.includes(name)) return;
   members.push(name);
-  
+
   const ul = document.getElementById("memberList");
   const li = document.createElement("li");
   li.innerText = name;
   ul.appendChild(li);
-  
+
   // 既存イベントに未参加として追加
   events.forEach(event => {
     event.status[name] = '未参加';
   });
-  
+
   renderEvents();
   document.getElementById("memberInput").value="";
 }
@@ -77,14 +78,12 @@ function addEvent(){
   const name = document.getElementById("eventInput").value.trim();
   const num = document.getElementById("eventNum").value;
   if(!name || !num) return;
-  
-  // 各メンバーは未参加で初期化
+
   let status = {};
   members.forEach(m => status[m]='未参加');
   events.push({name:name, num:num, status: status});
-  
+
   renderEvents();
-  
   document.getElementById("eventInput").value="";
   document.getElementById("eventNum").value="";
 }
@@ -96,7 +95,7 @@ function changeStatus(eventIndex, member, newStatus){
   renderEvents();
 }
 
-// テーブル表示
+// テーブル描画
 function renderEvents(){
   const table = document.getElementById("eventTable");
   table.innerHTML = `
@@ -108,38 +107,44 @@ function renderEvents(){
       <th>人数</th>
     </tr>
   `;
-  
+
   events.forEach((event, idx)=>{
     const row = table.insertRow();
-    
+
     // イベント名編集可
     const nameCell = row.insertCell(0);
     const nameInput = document.createElement("input");
-    nameInput.type = "text";
+    nameInput.type="text";
     nameInput.value = event.name;
-    nameInput.onchange = e => { event.name = e.target.value; };
+    nameInput.onchange = e=>{ event.name = e.target.value; };
     nameCell.appendChild(nameInput);
-    
-    // 参加済・参加希望・未参加
+
+    // 参加済、参加希望、未参加
     ['参加済','参加希望','未参加'].forEach((statusKey,colIndex)=>{
       const cell = row.insertCell(colIndex+1);
       Object.keys(event.status).forEach(member=>{
         if(event.status[member]===statusKey){
           const div = document.createElement("div");
-          div.innerText = member;
-          div.style.cursor = "pointer";
-          div.onclick = ()=>{
-            // クリックで状態切替
-            const nextStatus = prompt(`"${member}" の状態を変更 (参加済 / 参加希望 / 未参加)`, event.status[member]);
-            if(['参加済','参加希望','未参加'].includes(nextStatus)){
-              changeStatus(idx, member, nextStatus);
-            }
-          };
+          div.className="member-row";
+          const select = document.createElement("select");
+          ['参加済','参加希望','未参加'].forEach(option=>{
+            const opt = document.createElement("option");
+            opt.value = option;
+            opt.text = option;
+            if(option===statusKey) opt.selected=true;
+            select.appendChild(opt);
+          });
+          select.onchange = e=>{ changeStatus(idx, member, e.target.value); };
+          select.title = member;
+          const label = document.createElement("span");
+          label.innerText = member;
+          div.appendChild(label);
+          div.appendChild(select);
           cell.appendChild(div);
         }
       });
     });
-    
+
     // 必要人数編集可
     const numCell = row.insertCell(4);
     const numInput = document.createElement("input");
@@ -150,8 +155,6 @@ function renderEvents(){
     numCell.appendChild(numInput);
   });
 }
-
 </script>
-
 </body>
 </html>
